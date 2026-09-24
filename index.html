@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>โปรแกรมคำนวณดอกเบี้ยแบบลดต้นลดดอก (Effective Rate Calculator)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts (Sarabun) -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Sarabun', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#095196',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: white !important;
+            }
+            .print-card {
+                box-shadow: none !important;
+                border: 1px solid #e5e7eb !important;
+            }
+        }
+        /* Custom scrollbar for schedule table */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 min-h-screen flex flex-col justify-between">
+
+    <!-- Header / Navbar -->
+    <header class="bg-gradient-to-r from-slate-900 via-sky-900 to-slate-900 text-white shadow-lg no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="p-3 bg-sky-500/20 rounded-xl border border-sky-400/30 backdrop-blur-md">
+                        <i class="fa-solid fa-calculator text-2xl text-sky-400"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl sm:text-2xl font-bold tracking-tight">คำนวณดอกเบี้ยแบบลดต้นลดดอก</h1>
+                        <p class="text-xs sm:text-sm text-sky-200">Declining Balance / Effective Rate Calculator</p>
+                    </div>
+                </div>
+                <div class="hidden md:flex items-center space-x-2 text-xs bg-slate-800/60 px-3 py-1.5 rounded-full border border-slate-700">
+                    <i class="fa-solid fa-shield-halved text-emerald-400"></i>
+                    <span>คำนวณแม่นยำ 100%</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- Left Column: Input Form -->
+            <div class="lg:col-span-5 space-y-6 no-print">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 transition-all duration-300 hover:shadow-md">
+                    <h2 class="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3 mb-5 flex items-center">
+                        <i class="fa-solid fa-sliders text-sky-600 mr-2.5"></i>
+                        ข้อมูลสินเชื่อ
+                    </h2>
+
+                    <form id="calcForm" onsubmit="event.preventDefault(); calculateLoan();" class="space-y-4">
+                        <!-- Loan Amount -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                                จำนวนเงินกู้ (บาท) <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative rounded-xl shadow-sm">
+                                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-baht-sign"></i>
+                                </div>
+                                <input type="number" id="loanAmount" value="1000000" min="1000" step="1000" required
+                                    class="block w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-slate-800 text-base transition-all font-medium"
+                                    placeholder="เช่น 1,000,000">
+                            </div>
+                        </div>
+
+                        <!-- Interest Rate -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                                อัตราดอกเบี้ยต่อปี (%) <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative rounded-xl shadow-sm">
+                                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-percent"></i>
+                                </div>
+                                <input type="number" id="interestRate" value="6.5" min="0.01" max="100" step="0.01" required
+                                    class="block w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-slate-800 text-base transition-all font-medium"
+                                    placeholder="เช่น 6.5">
+                            </div>
+                        </div>
+
+                        <!-- Loan Term & Unit -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                                ระยะเวลาผ่อนชำระ <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div class="col-span-2 relative rounded-xl shadow-sm">
+                                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                        <i class="fa-regular fa-clock"></i>
+                                    </div>
+                                    <input type="number" id="loanTerm" value="30" min="1" step="1" required
+                                        class="block w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-slate-800 text-base transition-all font-medium"
+                                        placeholder="เช่น 30">
+                                </div>
+                                <div>
+                                    <select id="termUnit" onchange="calculateLoan()"
+                                        class="block w-full py-2.5 px-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-slate-800 text-sm font-semibold transition-all">
+                                        <option value="years" selected>ปี</option>
+                                        <option value="months">เดือน</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Custom Monthly Payment -->
+                        <div class="pt-2 border-t border-slate-100">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="text-sm font-semibold text-slate-700">
+                                    ค่างวดต่อเดือนแบบกำหนดเอง
+                                </label>
+                                <span class="text-xs text-slate-400 font-normal">(เว้นว่างหากใช้ค่าขั้นต่ำ)</span>
+                            </div>
+                            <div class="relative rounded-xl shadow-sm">
+                                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-money-bill-wave"></i>
+                                </div>
+                                <input type="number" id="customPayment" min="0" step="100"
+                                    class="block w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-slate-800 text-base transition-all font-medium"
+                                    placeholder="คำนวณขั้นต่ำอัตโนมัติ">
+                            </div>
+                        </div>
+
+                        <!-- Extra Payment Option -->
+                        <div class="p-4 bg-sky-50/70 rounded-xl border border-sky-100 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <label for="enableExtra" class="text-sm font-semibold text-sky-900 flex items-center cursor-pointer">
+                                    <i class="fa-solid fa-fire text-amber-500 mr-2"></i>
+                                    โปะเพิ่มประจำทุกเดือน (Extra Payment)
+                                </label>
+                                <input type="checkbox" id="enableExtra" onchange="toggleExtraPayment()" class="w-4 h-4 text-sky-600 rounded focus:ring-sky-500 cursor-pointer">
+                            </div>
+                            
+                            <div id="extraPaymentContainer" class="hidden space-y-2 pt-1">
+                                <div class="relative rounded-lg shadow-sm">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-sm">
+                                        +
+                                    </div>
+                                    <input type="number" id="extraPayment" value="2000" min="0" step="500"
+                                        class="block w-full pl-8 pr-3 py-2 bg-white border border-sky-200 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-slate-800 text-sm font-medium"
+                                        placeholder="จำนวนเงินโปะเพิ่มต่อเดือน">
+                                </div>
+                                <p class="text-xs text-sky-700">ช่วยให้ปิดหนี้ได้ไวขึ้น และประหยัดดอกเบี้ยมหาศาล!</p>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="w-full bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white font-bold py-3 px-4 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-calculator"></i>
+                            <span>คำนวณผลการผ่อนชำระ</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right Column: Results & Analytics -->
+            <div class="lg:col-span-7 space-y-6">
+                
+                <!-- Print Header (Visible only when printing) -->
+                <div class="hidden print:block mb-6 border-b pb-4">
+                    <h1 class="text-2xl font-bold text-slate-900">รายงานตารางผ่อนชำระสินเชื่อ (ลดต้นลดดอก)</h1>
+                    <p class="text-sm text-slate-600">สร้างจากระบบคำนวณดอกเบี้ยแบบลดต้นลดดอก - วันที่: <span id="printDate"></span></p>
+                </div>
+
+                <!-- Summary Cards Container -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 print-card">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-5">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center">
+                            <i class="fa-solid fa-chart-pie text-sky-600 mr-2.5"></i>
+                            สรุปผลการคำนวณ
+                        </h2>
+                        <div class="flex items-center space-x-2 no-print">
+                            <button onclick="exportCSV()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-1.5 px-3 rounded-lg border border-slate-200 transition-colors flex items-center">
+                                <i class="fa-solid fa-file-csv mr-1.5 text-emerald-600"></i> Export CSV
+                            </button>
+                            <button onclick="window.print()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-1.5 px-3 rounded-lg border border-slate-200 transition-colors flex items-center">
+                                <i class="fa-solid fa-print mr-1.5 text-slate-600"></i> พิมพ์ / PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Metrics Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                        <!-- Monthly Payment -->
+                        <div class="bg-gradient-to-br from-sky-50 to-blue-50/50 rounded-xl p-4 border border-sky-100">
+                            <span class="text-xs font-bold uppercase tracking-wider text-sky-700 block mb-1">ยอดผ่อนชำระต่อเดือน</span>
+                            <div class="text-2xl font-black text-sky-900" id="resMonthlyPay">0 ฿</div>
+                            <div class="text-xs text-sky-600/80 mt-1" id="resMinPayNote">ค่างวดตามสัญญา</div>
+                        </div>
+
+                        <!-- Total Interest -->
+                        <div class="bg-gradient-to-br from-amber-50 to-orange-50/50 rounded-xl p-4 border border-amber-100">
+                            <span class="text-xs font-bold uppercase tracking-wider text-amber-700 block mb-1">ดอกเบี้ยรวมทั้งหมด</span>
+                            <div class="text-2xl font-black text-amber-900" id="resTotalInterest">0 ฿</div>
+                            <div class="text-xs text-amber-600/80 mt-1" id="resSavedInterest">ประหยัดจากการโปะ: 0 ฿</div>
+                        </div>
+
+                        <!-- Total Payment -->
+                        <div class="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-4 border border-slate-200">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-600 block mb-1">รวมเงินต้องชำระทั้งสิ้น</span>
+                            <div class="text-2xl font-black text-slate-800" id="resTotalPaid">0 ฿</div>
+                            <div class="text-xs text-slate-500 mt-1" id="resTotalMonths">จำนวน 0 งวด</div>
+                        </div>
+                    </div>
+
+                    <!-- Chart & Summary breakdown -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center border-t border-slate-100 pt-5">
+                        <div class="relative flex justify-center items-center h-48">
+                            <canvas id="paymentChart"></canvas>
+                        </div>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+                                <span class="text-slate-500 flex items-center">
+                                    <span class="w-3 h-3 rounded-full bg-sky-500 inline-block mr-2"></span>
+                                    เงินต้นคงเหลือรวม
+                                </span>
+                                <span class="font-bold text-slate-800" id="resPrincipalSummary">0 ฿</span>
+                            </div>
+                            <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+                                <span class="text-slate-500 flex items-center">
+                                    <span class="w-3 h-3 rounded-full bg-amber-500 inline-block mr-2"></span>
+                                    ดอกเบี้ยจ่ายรวม
+                                </span>
+                                <span class="font-bold text-slate-800" id="resInterestSummary">0 ฿</span>
+                            </div>
+                            <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+                                <span class="text-slate-500">อัตราส่วนดอกเบี้ยต่อเงินต้น</span>
+                                <span class="font-bold text-slate-800" id="resInterestRatio">0%</span>
+                            </div>
+                            <div class="flex justify-between items-center text-emerald-700 bg-emerald-50 p-2.5 rounded-lg border border-emerald-100">
+                                <span class="font-medium text-xs sm:text-sm">ระยะเวลาผ่อนจริง</span>
+                                <span class="font-bold text-sm sm:text-base" id="resActualTerm">0 ปี 0 เดือน</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Amortization Schedule Table Section -->
+        <div class="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 print-card">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-slate-100 gap-2">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center">
+                        <i class="fa-solid fa-list-ol text-sky-600 mr-2.5"></i>
+                        ตารางแสดงผลการผ่อนชำระแต่ละงวด (Amortization Schedule)
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">แสดงการตัดเงินต้นและดอกเบี้ยแบบลดต้นลดดอกทุกงวด</p>
+                </div>
+                <div class="text-xs text-slate-500 font-medium">
+                    แสดงทั้งหมด <span id="tableRowsCount" class="font-bold text-sky-600">0</span> งวด
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="overflow-x-auto custom-scrollbar max-h-[500px] rounded-xl border border-slate-200">
+                <table class="w-full text-sm text-left text-slate-600">
+                    <thead class="text-xs text-slate-700 uppercase bg-slate-100 sticky top-0 z-10 border-b border-slate-200">
+                        <tr>
+                            <th scope="col" class="px-4 py-3 text-center">งวดที่</th>
+                            <th scope="col" class="px-4 py-3 text-right">เงินต้นคงเหลือต้นงวด</th>
+                            <th scope="col" class="px-4 py-3 text-right">เงินผ่อนชำระ (Payment)</th>
+                            <th scope="col" class="px-4 py-3 text-right text-amber-700">ดอกเบี้ย (Interest)</th>
+                            <th scope="col" class="px-4 py-3 text-right text-emerald-700">ตัดเงินต้น (Principal)</th>
+                            <th scope="col" class="px-4 py-3 text-right">เงินต้นคงเหลือปลายงวด</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleTableBody" class="divide-y divide-slate-100 bg-white">
+                        <!-- Table content dynamically injected -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500 no-print mt-12">
+        <div class="max-w-7xl mx-auto px-4">
+            <p>หมายเหตุ: การคำนวณข้างต้นเป็นการประมาณการแบบเดือนละ 30 วัน / ปีละ 365 วัน ยอดชำระจริงอาจขึ้นอยู่กับนโยบายของสถาบันทางการเงินแต่ละแห่ง</p>
+            <p class="mt-1">ระบบคำนวณดอกเบี้ยแบบลดต้นลดดอก (Declining Balance Interest Rate) &copy; 2026</p>
+        </div>
+    </footer>
+
+    <script>
+        // Global variables
+        let paymentChartInstance = null;
+        let scheduleData = [];
+
+        // Format Number Helper
+        function formatNum(num) {
+            return new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
+        }
+
+        // Toggle Extra Payment UI
+        function toggleExtraPayment() {
+            const isChecked = document.getElementById('enableExtra').checked;
+            const container = document.getElementById('extraPaymentContainer');
+            if (isChecked) {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+            calculateLoan();
+        }
+
+        // Auto calculate on input change
+        document.querySelectorAll('#calcForm input').forEach(input => {
+            input.addEventListener('input', () => {
+                calculateLoan();
+            });
+        });
+
+        // Initialize Print Date
+        document.getElementById('printDate').innerText = new Date().toLocaleDateString('th-TH', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        });
+
+        // Main Calculation Function
+        function calculateLoan() {
+            // Get Inputs
+            const loanAmount = parseFloat(document.getElementById('loanAmount').value) || 0;
+            const annualRate = parseFloat(document.getElementById('interestRate').value) || 0;
+            const termInput = parseFloat(document.getElementById('loanTerm').value) || 0;
+            const termUnit = document.getElementById('termUnit').value;
+            const customPayment = parseFloat(document.getElementById('customPayment').value) || 0;
+            const enableExtra = document.getElementById('enableExtra').checked;
+            const extraPayment = enableExtra ? (parseFloat(document.getElementById('extraPayment').value) || 0) : 0;
+
+            if (loanAmount <= 0 || annualRate <= 0 || termInput <= 0) {
+                return;
+            }
+
+            // Total Months
+            const totalMonths = termUnit === 'years' ? Math.round(termInput * 12) : Math.round(termInput);
+            const monthlyRate = (annualRate / 100) / 12;
+
+            // Calculate Minimum PMT (Formula: P * r * (1+r)^n / ((1+r)^n - 1))
+            const minMonthlyPMT = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, totalMonths)) / (Math.pow(1 + monthlyRate, totalMonths) - 1);
+
+            // Determine Target Monthly Base Payment
+            let targetMonthlyPayment = customPayment > 0 ? customPayment : minMonthlyPMT;
+
+            if (targetMonthlyPayment < minMonthlyPMT) {
+                // If custom payment is lower than minimum interest/principal required, fallback to minimum
+                targetMonthlyPayment = minMonthlyPMT;
+            }
+
+            // Calculate baseline scenario (without extra payment) for comparison
+            let baseTotalInterest = 0;
+            let tempBalance = loanAmount;
+            for (let i = 1; i <= totalMonths; i++) {
+                let interest = tempBalance * monthlyRate;
+                let principal = minMonthlyPMT - interest;
+                if (tempBalance < principal) {
+                    principal = tempBalance;
+                }
+                tempBalance -= principal;
+                baseTotalInterest += interest;
+                if (tempBalance <= 0) break;
+            }
+
+            // Generate Amortization Schedule with Actual/Extra Payments
+            scheduleData = [];
+            let currentBalance = loanAmount;
+            let totalPaid = 0;
+            let totalInterestPaid = 0;
+            let month = 0;
+
+            while (currentBalance > 0.01 && month < 1200) { // Safety cap 100 years
+                month++;
+                let startBalance = currentBalance;
+                let monthlyInterest = startBalance * monthlyRate;
+                
+                // Regular payment + extra
+                let plannedPayment = targetMonthlyPayment + extraPayment;
+                
+                // Check final payment
+                let actualPayment = plannedPayment;
+                let principalPaid = actualPayment - monthlyInterest;
+
+                if (startBalance + monthlyInterest <= actualPayment) {
+                    actualPayment = startBalance + monthlyInterest;
+                    principalPaid = startBalance;
+                    currentBalance = 0;
+                } else {
+                    currentBalance = startBalance - principalPaid;
+                }
+
+                totalPaid += actualPayment;
+                totalInterestPaid += monthlyInterest;
+
+                scheduleData.push({
+                    month: month,
+                    startBalance: startBalance,
+                    payment: actualPayment,
+                    interest: monthlyInterest,
+                    principal: principalPaid,
+                    endBalance: currentBalance
+                });
+            }
+
+            // Calculations for UI Display
+            const savedInterest = Math.max(0, baseTotalInterest - totalInterestPaid);
+            const actualYears = Math.floor(month / 12);
+            const remainingMonths = month % 12;
+            let termString = "";
+            if (actualYears > 0) termString += `${actualYears} ปี `;
+            if (remainingMonths > 0) termString += `${remainingMonths} เดือน`;
+            if (month === 0) termString = "0 เดือน";
+
+            // Update DOM Results Summary
+            document.getElementById('resMonthlyPay').innerText = formatNum(targetMonthlyPayment + extraPayment) + ' ฿';
+            document.getElementById('resMinPayNote').innerText = extraPayment > 0 
+                ? `(เงินผ่อนขั้นต่ำ ${formatNum(minMonthlyPMT)} + โปะ ${formatNum(extraPayment)})`
+                : `(ผ่อนชำระขั้นต่ำ ${formatNum(minMonthlyPMT)} บาท/เดือน)`;
+
+            document.getElementById('resTotalInterest').innerText = formatNum(totalInterestPaid) + ' ฿';
+            document.getElementById('resSavedInterest').innerText = savedInterest > 10 
+                ? `🎉 ประหยัดดอกเบี้ยได้ ${formatNum(savedInterest)} ฿`
+                : `การจ่ายตามเกณฑ์มาตรฐาน`;
+
+            document.getElementById('resTotalPaid').innerText = formatNum(totalPaid) + ' ฿';
+            document.getElementById('resTotalMonths').innerText = `รวมชำระทั้งหมด ${month} งวด`;
+
+            document.getElementById('resPrincipalSummary').innerText = formatNum(loanAmount) + ' ฿';
+            document.getElementById('resInterestSummary').innerText = formatNum(totalInterestPaid) + ' ฿';
+            
+            const ratio = ((totalInterestPaid / loanAmount) * 100).toFixed(1);
+            document.getElementById('resInterestRatio').innerText = `${ratio}% ของเงินต้น`;
+            document.getElementById('resActualTerm').innerText = termString;
+
+            // Render Table
+            renderScheduleTable(scheduleData);
+
+            // Render Chart
+            renderChart(loanAmount, totalInterestPaid);
+        }
+
+        // Render Schedule Table
+        function renderScheduleTable(data) {
+            const tbody = document.getElementById('scheduleTableBody');
+            tbody.innerHTML = '';
+            document.getElementById('tableRowsCount').innerText = data.length;
+
+            data.forEach((row) => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/80 transition-colors border-b border-slate-100 text-xs sm:text-sm';
+                
+                tr.innerHTML = `
+                    <td class="px-4 py-2.5 text-center font-semibold text-slate-700">${row.month}</td>
+                    <td class="px-4 py-2.5 text-right text-slate-600">${formatNum(row.startBalance)}</td>
+                    <td class="px-4 py-2.5 text-right font-semibold text-slate-800 bg-slate-50/50">${formatNum(row.payment)}</td>
+                    <td class="px-4 py-2.5 text-right text-amber-600 font-medium">${formatNum(row.interest)}</td>
+                    <td class="px-4 py-2.5 text-right text-emerald-600 font-medium">${formatNum(row.principal)}</td>
+                    <td class="px-4 py-2.5 text-right font-bold text-slate-800">${formatNum(row.endBalance)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Render Chart.js Pie/Doughnut Chart
+        function renderChart(principal, interest) {
+            const ctx = document.getElementById('paymentChart').getContext('2d');
+
+            if (paymentChartInstance) {
+                paymentChartInstance.destroy();
+            }
+
+            paymentChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['เงินต้นคงเหลือ', 'ดอกเบี้ยสะสม'],
+                    datasets: [{
+                        data: [principal, interest],
+                        backgroundColor: ['#0284c7', '#f59e0b'],
+                        hoverBackgroundColor: ['#0369a1', '#d97706'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    family: 'Sarabun',
+                                    size: 12
+                                },
+                                padding: 15,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed !== null) {
+                                        label += formatNum(context.parsed) + ' บาท';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '68%'
+                }
+            });
+        }
+
+        // Export Schedule to CSV
+        function exportCSV() {
+            if (!scheduleData || scheduleData.length === 0) return;
+
+            let csvContent = "\uFEFF"; // UTF-8 BOM for Thai support in Excel
+            csvContent += "งวดที่,เงินต้นคงเหลือต้นงวด (บาท),ยอดผ่อนชำระ (บาท),ดอกเบี้ย (บาท),ตัดเงินต้น (บาท),เงินต้นคงเหลือปลายงวด (บาท)\n";
+
+            scheduleData.forEach(row => {
+                csvContent += `${row.month},${row.startBalance.toFixed(2)},${row.payment.toFixed(2)},${row.interest.toFixed(2)},${row.principal.toFixed(2)},${row.endBalance.toFixed(2)}\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `ตารางผ่อนชำระ_ลดต้นลดดอก_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Run calculation on initial load
+        window.onload = function() {
+            calculateLoan();
+        };
+    </script>
+</body>
+</html>
